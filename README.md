@@ -1,7 +1,7 @@
 
 <h1 align="left" style="display: flex; align-items: center;">
   ArchScale
-  <img src="assets/shooting_stars.png" alt="ArchScale Logo" width="80" style="margin-left: 16px; vertical-align: middle;"/>
+  <img src="assets/shooting_stars.png" alt="ArchScale Logo" width="100" style="margin-left: 16px; vertical-align: middle;"/>
 </h1>
 
 
@@ -18,12 +18,12 @@ ArchScale is a comprehensive toolkit for training and evaluating neural language
 - **Architectures**: Transformers, various SSM/attention/hybrid architectures, [YOCO](https://arxiv.org/abs/2405.05254), [Differential Attention](https://arxiv.org/pdf/2410.05258).
 - **Scaling Laws**: μP++, μP, Chinchilla FLOPs scaling, and various experimental scaling laws for batch size, weight decay, etc.
 - **Optimizers**: Muon, AdamW, Hybrid Optimizers.
-- **Research-Friendly**: Easy adding/modifying new architectures/scaling laws/optimizers/scheduling/initialization, [WYSIWYG](https://en.wikipedia.org/wiki/WYSIWYG) philosophy for experiments logging. 
+- **Research-Friendly**: Easy adding/modifying architectures/scaling-laws/optimizers/scheduling/initialization, [WYSIWYG](https://en.wikipedia.org/wiki/WYSIWYG) philosophy for experiments logging. 
 - **Performance**: End2end torch.compile training, clean & correct [Lightning Fabric](https://github.com/Lightning-AI/pytorch-lightning) package for FSDP distributed training, mixed precision, tensor parallelism and experimental fp8 support.
 - **Training**: Simple data mixture support, packed dataset with pre-tokenization, variable-length training for long-context.
 - **Evaluation**: Simple support for likelihood/generation based evaluation, long-context evaluation on Phonebook and RULER, scaling curve fitting and comparisons.
 
-## Pre-Training
+## Pretraining
 
 We provide the [`Dockerfile`](Dockerfile) for setting up the training and evaluation environments. One can refer to the [Samba](https://github.com/microsoft/Samba/?tab=readme-ov-file#data-preparation) codebase for Slimpajama data tokenization. Training across a scale from 110M to 3.3B-parameter SambaY model with μP++ and Chinchilla token scaling on 8 GPUs is as simple as:
 
@@ -38,7 +38,7 @@ for depth in 8 12 16 20 24; do
 done
 ```
 
-In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in ['setup'](pretrain.py#129) will transfer these HPs to the actual HPs used at the target depth such d8, d12 or d24. One can easily sweep the base HPs with the following scripts.
+In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#129) function will transfer these HPs to the actual HPs used at the target depth such d8, d12 or d24. One can easily sweep the base HPs with the following scripts.
 
 ```bash
 for lr in 4e-4 1e-4 1e-3; do
