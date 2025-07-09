@@ -38,7 +38,7 @@ for depth in 8 12 16 20 24; do
 done
 ```
 
-In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#129) function will transfer these HPs to the actual HPs used at the target depth such d8, d12 or d24. One can easily sweep the base HPs with the following scripts.
+In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#129) function will transfer these HPs to the actual HPs used at the target depth such d8, d12 or d24. After the training finished, we can use `plot_flops_scaling.py` to fit the scaling curves, and comparing the fitted scaling parameters between different architectures. We can also easily sweep the base HPs with the following scripts.
 
 ```bash
 for lr in 4e-4 1e-4 1e-3; do
