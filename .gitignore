@@ -21,3 +21,4 @@ datasets/
 hf_version/
 *.log
 *.json
+!assets/shooting_stars.png
