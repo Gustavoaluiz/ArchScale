@@ -114,7 +114,7 @@ Evaluate reasoning capabilities on mathematical and scientific tasks using `eval
 ./eval_reason.sh  microsoft/Phi-4-mini-flash-reasoning aime24 output_dir
 ```
 
-The reasoning evaluation uses vLLM backend with configurable generation parameters and supports multi-GPU evaluation.
+The reasoning evaluation uses vLLM backend with configurable generation parameters and supports multi-GPU evaluation. The script requires extra dependencies on `math-verify==0.7.0` and `lighteval==0.10.0`.
 
 ## Citation
 
