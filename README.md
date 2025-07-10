@@ -28,7 +28,6 @@ ArchScale is a comprehensive toolkit for training and evaluating neural language
 We provide the [`Dockerfile`](Dockerfile) for setting up the training and evaluation environments. One can refer to the [Samba](https://github.com/microsoft/Samba/?tab=readme-ov-file#data-preparation) codebase for Slimpajama data tokenization. Training across a scale from 110M to 3.3B-parameter SambaY model with μP++ and Chinchilla token scaling on 8 GPUs is as simple as:
 
 ```bash
-export PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True'
 export LIGHTNING_ARTIFACTS_DIR='path/to/output_dir'
 for depth in 8 12 16 20 24; do
     torchrun --nnodes=1 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} pretrain.py \
@@ -79,7 +78,6 @@ ArchScale provides comprehensive evaluation support for trained models across mu
 Evaluate trained models on common language understanding tasks for SambaY architecture:
 
 ```bash
-export CUDA_VISIBLE_DEVICES=0
 python eval.py --model ArchScale \
     --model_args pretrained=path/to/checkpoint.pth,config="sambay_d16" \
     --tasks wikitext,lambada_openai,arc_easy,arc_challenge,winogrande,hellaswag,piqa,social_iqa \
