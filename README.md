@@ -38,7 +38,7 @@ for depth in 8 12 16 20 24; do
 done
 ```
 
-In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#L44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#L129) function will transfer these HPs to the actual HPs used at the target depth such d8, d12 or d24. After the training finished, we can use `plot_flops_scaling.py` to fit the scaling curves, and comparing the fitted scaling parameters between different architectures. We can also easily sweep the base HPs with the following scripts.
+In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#L44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#L129) function will transfer these HPs to the actual HPs used at the target depth such as d8, d12 or d24. After the training finished, we can use `plot_flops_scaling.py` to fit the scaling curves, and comparing the fitted scaling parameters between different architectures. We can also easily sweep the base HPs with the following scripts.
 
 ```bash
 for lr in 4e-4 1e-4 1e-3; do
@@ -61,6 +61,14 @@ torchrun --nnodes=1 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MA
     --train_name scaling_mup_rbase_varlen
 ```
 where the symbol `rbase` will trigger the model use a larger RoPE base for long-context training and `varlen` will applies variable length training that seperates documents based on the EOS tokens.
+
+For variable length training on Mamba-1 based models, extra dependencies need to be installed:
+
+```bash
+git clone https://github.com/zigzagcai/varlen_mamba.git --branch feat/add-cu_seqlens
+cd varlen_mamba
+pip install --no-build-isolation -e .
+```
 
 ## Evaluation
 
@@ -114,7 +122,7 @@ Evaluate reasoning capabilities on mathematical and scientific tasks using `eval
 ./eval_reason.sh  microsoft/Phi-4-mini-flash-reasoning aime24 output_dir
 ```
 
-The reasoning evaluation uses vLLM backend with configurable generation parameters and supports multi-GPU evaluation. The script requires extra dependencies on `math-verify==0.7.0` and `lighteval==0.10.0`.
+The reasoning evaluation uses vLLM backend with configurable generation parameters and supports multi-GPU evaluation. The script requires extra dependencies on `math-verify==0.7.0` and `lighteval==0.10.0`. We currently provide the vLLM inference support in this [PR](https://github.com/vllm-project/vllm/pull/20702).
 
 ## Citation
 
