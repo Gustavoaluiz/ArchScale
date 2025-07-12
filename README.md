@@ -12,6 +12,10 @@ ArchScale is a comprehensive toolkit for training and evaluating neural language
 
 ## Updates
 - [July 9] Released the code for training [Decoder-Hybrid-Decoder Architectures](https://aka.ms/flashreasoning-paper) with μP++, and the model checkpoint for [Phi-4-mini-flash-reasoning](https://huggingface.co/microsoft/Phi-4-mini-flash-reasoning) ⚡
+<p align="center">
+  <img src="assets/sambay_arch.png" alt="SambaY Architecture" width="45%" style="display:inline-block; vertical-align:middle; margin-right:2%;">
+  <img src="assets/scaling_d8-d24.png" alt="Scaling Laws (d=8-24)" width="45%" style="display:inline-block; vertical-align:middle;">
+</p>
 
 ## Features
 
