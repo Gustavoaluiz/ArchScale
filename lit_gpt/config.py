@@ -125,40 +125,6 @@ class Config:
 
 configs=[]
 
-scaling_phi4code_gqa4_configs = [
-        dict(
-        org="Microsoft",
-        name="phi4code_gqa4_d"+str(d), 
-        block_size=4096,
-        vocab_size=32064,
-        padding_multiple=64,
-        n_layer= d,
-        n_head= d,
-        ar= 128,
-        n_query_groups= 4, 
-        mlp_expand= 4, 
-    )
-    for d in [8,12,16,20,24]
-]
-configs.extend(scaling_phi4code_gqa4_configs)
-
-scaling_phi4code_configs = [
-        dict(
-        org="Microsoft",
-        name="phi4code_d"+str(d), 
-        block_size=4096,
-        vocab_size=32064,
-        padding_multiple=64,
-        n_layer= d,
-        n_head= d,
-        ar= 128,
-        n_query_groups= d//4, 
-        mlp_expand= 4, 
-    )
-    for d in [8,12,16,20,24]
-]
-configs.extend(scaling_phi4code_configs)
-
 scaling_xformer_configs = [
         dict(
         org="Microsoft",
