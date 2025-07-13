@@ -20,7 +20,7 @@ ArchScale is a comprehensive toolkit for training and evaluating neural language
 ## Features
 
 - **Architectures**: Transformers, various SSM/attention/hybrid architectures, [YOCO](https://arxiv.org/abs/2405.05254), [Differential Attention](https://arxiv.org/pdf/2410.05258).
-- **Scaling Laws**: μP++, μP, Chinchilla FLOPs scaling, and various experimental scaling laws for batch size, weight decay, etc.
+- **Scaling Laws**: [μP++](https://aka.ms/flashreasoning-paper), μP, Chinchilla FLOPs scaling, and various experimental scaling laws for batch size, weight decay, etc.
 - **Optimizers**: Muon, AdamW, Hybrid Optimizers.
 - **Research-Friendly**: Easy adding/modifying architectures/scaling-laws/optimizers/scheduling/initialization, [WYSIWYG](https://en.wikipedia.org/wiki/WYSIWYG) philosophy for experiments logging. 
 - **Performance**: End2end torch.compile training, clean & correct [Lightning Fabric](https://github.com/Lightning-AI/pytorch-lightning) package for FSDP distributed training, mixed precision, tensor parallelism and experimental fp8 support.
