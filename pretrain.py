@@ -420,6 +420,9 @@ def main(fabric, train_data_dir, val_data_dir, resume, fsdp_save_mem, **overides
             )
             optimizer2 = Muon_fsdp2([param_groups[1]], lr=learning_rate * weight_lr_scale, beta=muon_beta, ns_steps=5, muon_mode="old_large")
             optimizer = [fabric.setup_optimizers(optimizer1), fabric.setup_optimizers(optimizer2)]
+        else:
+            optimizer = torch.optim.AdamW(param_groups, eps=eps, fused=True)
+            optimizer = fabric.setup_optimizers(optimizer)
     else:
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=learning_rate, weight_decay=weight_decay, betas=(beta1, beta2), fused=True
