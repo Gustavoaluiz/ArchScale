@@ -56,7 +56,7 @@ Note that in this case, the learning rate is tuned for the d16, 1.0B model with 
 
 ## Long-Context Training
 
-After shuffling and pre-tokenizing the [ProLong-64K](https://huggingface.co/datasets/princeton-nlp/prolong-data-64K) data, we can train a d16 model with 32K sequence length and 40B tokens on 8 GPUs using the following script:  
+After shuffling and pre-tokenizing the [ProLong-64K](https://huggingface.co/datasets/princeton-nlp/prolong-data-64K) data (Pre-tokenized data is [here](https://huggingface.co/datasets/jsun/Prolong_64K_v2_Llama2_Tokenizer)!), we can train a d16 model with 32K sequence length and 40B tokens on 8 GPUs using the following script:  
 ```bash
 torchrun --nnodes=1 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} pretrain.py \
     --train_data_dir path/to/prolong/data  --val_data_dir path/to/prolong/data \
