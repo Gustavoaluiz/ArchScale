@@ -137,6 +137,13 @@ If you find our work useful, please consider citing:
   year={2025},
   url={https://github.com/microsoft/ArchScale}
 }
+
+@article{ren2025decoder,
+  title={Decoder-Hybrid-Decoder Architecture for Efficient Reasoning with Long Generation},
+  author={Ren, Liliang and Chen, Congcong and Xu, Haoran and Kim, Young Jin and Atkinson, Adam and Zhan, Zheng and Sun, Jiankai and Peng, Baolin and Liu, Liyuan and Wang, Shuohang and others},
+  journal={arXiv preprint arXiv:2507.06607},
+  year={2025}
+}
 ```
 
 ## License
