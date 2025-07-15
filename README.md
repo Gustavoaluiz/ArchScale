@@ -140,7 +140,7 @@ If you find our work useful, please consider citing:
 
 @article{ren2025decoder,
   title={Decoder-Hybrid-Decoder Architecture for Efficient Reasoning with Long Generation},
-  author={Ren, Liliang and Chen, Congcong and Xu, Haoran and Kim, Young Jin and Atkinson, Adam and Zhan, Zheng and Sun, Jiankai and Peng, Baolin and Liu, Liyuan and Wang, Shuohang and others},
+  author={Liliang Ren and Congcong Chen and Haoran Xu and Young Jin Kim and Adam Atkinson and Zheng Zhan and Jiankai Sun and Baolin Peng and Liyuan Liu and Shuohang Wang and Hao Cheng and Jianfeng Gao and Weizhu Chen and Yelong Shen},
   journal={arXiv preprint arXiv:2507.06607},
   year={2025}
 }
