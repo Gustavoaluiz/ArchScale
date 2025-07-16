@@ -63,7 +63,7 @@ torchrun --nnodes=1 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MA
     --train_model transformer --depth 16 --ctx_len 32768 --max_tokens 4e10 \
     --train_name scaling_mup_rbase_varlen
 ```
-where the symbol `rbase` will trigger the model use a larger RoPE base for long-context training and `varlen` will applies variable length training that seperates documents based on the EOS tokens.
+where the symbol in the train_name, `rbase`, will trigger the model use a larger RoPE base for long-context training and `varlen` will applies variable length training that seperates documents based on the EOS tokens.
 
 For variable length training on Mamba-1 based models, extra dependencies need to be installed:
 
