@@ -26,3 +26,4 @@ RUN pip install opt_einsum
 RUN pip install git+https://github.com/renll/flash-linear-attention.git
 RUN pip install lm-eval["ruler"]
 RUN pip install azureml-core
+RUN pip install liger_kernel==0.4.0

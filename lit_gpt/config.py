@@ -29,6 +29,8 @@ class Config:
     mlp_expand: int = 4 # MLP expand ratio: intermediate_size = mlp_expand * n_embd
     rotary_percentage: float = 1.0 # percentage of rotary embedding
     bias: bool = False # use bias for linear layers
+    attn_bias: bool = False # use bias for attention qkv linear layers
+    attn_out_bias: bool = False # use bias for attention output linear layers
     local_window: int = -1 # window size for sliding window attention
     mlp: bool = True # use MLP
     full_per_layer: int = 1000000 # use full attention at the end of every x layers
@@ -124,6 +126,35 @@ class Config:
 
 
 configs=[]
+
+phi4_mini_flash_configs = [
+    dict(
+        org="Microsoft",
+        name="phi4miniflash_d32", 
+        block_size=8192,
+        vocab_size=200064,
+        padding_multiple=64,
+        rnn_per_layer=2,
+        rnn_type="mamba",
+        yoco = True,
+        gmu_yoco = True,
+        nope = True,
+        attn_bias = True,
+        attn_out_bias = True,
+        n_layer=32,
+        n_head=40,
+        use_da = True,
+        head_dim=64,
+        ar = 80,
+        sp_init = True,
+        _norm_class = "LayerNorm",
+        n_query_groups= 20, 
+        mlp_expand= 4, 
+        local_window = 512, 
+    )
+]
+configs.extend(phi4_mini_flash_configs)
+
 
 scaling_xformer_configs = [
         dict(

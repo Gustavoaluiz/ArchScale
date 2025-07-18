@@ -37,7 +37,7 @@ from .gated_deltanet import GatedDeltaNet
 import copy
 from collections import namedtuple
 
-CausalLMOutput = namedtuple("CausalLMOutput", ["logits"])
+CausalLMOutput = namedtuple("CausalLMOutput", ["logits", "weight"], defaults=[None, None])
 RoPECache = Tuple[torch.Tensor, torch.Tensor]
 KVCache = Tuple[torch.Tensor, torch.Tensor]
 
@@ -190,8 +190,11 @@ class GPT(nn.Module):
 
         x = self.transformer.ln_f(x.to(dtype=self.transformer.ln_f.weight.dtype))
         x = x * self.logit_scale
-        lm_logits = self.lm_head(x)
-        return CausalLMOutput(logits=lm_logits) # (b, t, vocab_size)
+        if self.config.vocab_size > 100_000 and self.training:
+            return CausalLMOutput(logits=x, weight=self.lm_head.weight) # (b, t, vocab_size)
+        else:
+            lm_logits = self.lm_head(x)
+            return CausalLMOutput(logits=lm_logits) # (b, t, vocab_size)
 
     @classmethod
     def from_name(cls, name: str, **kwargs: Any) -> Self:
@@ -365,7 +368,7 @@ class CausalSelfAttention(nn.Module):
             self.k_sink = nn.Parameter(torch.zeros(self.n_query_groups * self.head_size))
             self.v_sink = torch.zeros(self.n_query_groups * self.head_size)
         # key, query, value projections for all heads, but in a batch
-        self.attn = nn.Linear(n_embd, shape, bias=config.bias)
+        self.attn = nn.Linear(n_embd, shape, bias=config.attn_bias)
         # output projection
         self.config = config
         self.scale = config.attn_scale if config.attn_scale is not None else 1.0 / math.sqrt(self.head_size) 
@@ -382,7 +385,7 @@ class CausalSelfAttention(nn.Module):
             self.da = FlashDiffAttention(self.head_size, depth, causal=True, softmax_scale= self.scale, window_size = self.win_tuple)
         else:
             self.attn_func = FlashCrossAttention(causal=True, softmax_scale= self.scale, window_size = self.win_tuple)
-        self.proj = nn.Linear(self.head_size * self.n_head, n_embd, bias=config.bias)
+        self.proj = nn.Linear(self.head_size * self.n_head, n_embd, bias=config.attn_out_bias)
         self.sc = config.sc_attn
         if self.sc:
             self.q_dim = self.n_head * self.head_size

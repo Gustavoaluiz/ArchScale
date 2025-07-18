@@ -11,6 +11,7 @@ ArchScale is a comprehensive toolkit for training and evaluating neural language
 
 
 ## Updates
+- [July 18] Released the code for large-scale pre-training of Phi-4-mini-flash!
 - [July 9] Released the code for training [Decoder-Hybrid-Decoder Architectures](https://aka.ms/flashreasoning-paper) with μP++, and the model checkpoint for [Phi-4-mini-flash-reasoning](https://huggingface.co/microsoft/Phi-4-mini-flash-reasoning) ⚡
 <p align="center">
   <img src="assets/sambay_arch.png" alt="SambaY Architecture" width="45%" style="display:inline-block; vertical-align:middle; margin-right:2%;">
@@ -24,15 +25,32 @@ ArchScale is a comprehensive toolkit for training and evaluating neural language
 - **Optimizers**: Muon, AdamW, Hybrid Optimizers.
 - **Research-Friendly**: Easy adding/modifying architectures/scaling-laws/optimizers/scheduling/initialization, [WYSIWYG](https://en.wikipedia.org/wiki/WYSIWYG) philosophy for experiments logging. 
 - **Performance**: End2end torch.compile training, clean & correct [Lightning Fabric](https://github.com/Lightning-AI/pytorch-lightning) package for FSDP distributed training, mixed precision, tensor parallelism and experimental fp8 support.
-- **Training**: Simple data mixture support, packed dataset with pre-tokenization, variable-length training for long-context.
+- **Training**: Simple data mixture support, packed dataset with pre-tokenization, variable-length training for long-context, stable large vocabulary training with fused kernel.
 - **Evaluation**: Simple support for likelihood/generation based evaluation, long-context evaluation on Phonebook and RULER, scaling curve fitting and comparisons.
 
 ## Pretraining
 
-We provide the [`Dockerfile`](Dockerfile) for setting up the training and evaluation environments. One can refer to the [Samba](https://github.com/microsoft/Samba/?tab=readme-ov-file#data-preparation) codebase for Slimpajama data tokenization. Training across a scale from 110M to 3.3B-parameter SambaY model with μP++ and Chinchilla token scaling on 8 GPUs is as simple as:
+We provide the [`Dockerfile`](Dockerfile) for setting up the training and evaluation environments. One can refer to the [Samba](https://github.com/microsoft/Samba/?tab=readme-ov-file#data-preparation) codebase for SlimPajama data tokenization.
 
+### Pretrain Phi4-mini-Flash
+
+To pre-train on 5T high quality data tokenized with `microsoft/Phi-4-mini-flash-reasoning`, we can use the following script to launch the job on 1K GPUs with standard parametrization:
 ```bash
 export LIGHTNING_ARTIFACTS_DIR='path/to/output_dir'
+torchrun --nnodes=128 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} pretrain.py \
+    --train_data_dir path/to/phi4/data \
+    --base_hps.eta0=5e-4 --base_hps.b0=8388608 --base_hps.warmup_tokens0=25_165_824_000 \
+    --ctx_len 8192 --max_tokens 5e12 --resume="auto" \
+    --train_model phi4miniflash --depth ${depth} \
+    --train_name scaling
+```
+We generally recommend also trying a cleaner architecture with `--train_model sambayda` (need to change the vocab size to 200064) and `--depth 24`, together with μP++ using `--train_name scaling_mup_tie` for better performance and training stability.
+
+### Scaling FLOPs
+
+Training across a scale from 110M to 3.3B-parameter SambaY model with μP++ and Chinchilla token scaling on 8 GPUs is as simple as:
+
+```bash
 for depth in 8 12 16 20 24; do
     torchrun --nnodes=1 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} pretrain.py \
         --train_data_dir path/to/slim_pajama/data  --val_data_dir path/to/slim_pajama/data \
@@ -40,8 +58,23 @@ for depth in 8 12 16 20 24; do
         --train_name scaling_mup
 done
 ```
+In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#L44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#L129) function will transfer these HPs to the actual HPs used at the target depth such as d8, d12 or d24. After the training finished, we can use `plot_flops_scaling.py` to fit the scaling curves, and comparing the fitted scaling parameters between different architectures. 
 
-In the backend, a dataclass [`BaseHyperparameters`](pretrain.py#L44) defines the optimization related HyperParameters (HPs) for a d16 (depth=16) model, and the scaling laws defined in [`setup`](pretrain.py#L129) function will transfer these HPs to the actual HPs used at the target depth such as d8, d12 or d24. After the training finished, we can use `plot_flops_scaling.py` to fit the scaling curves, and comparing the fitted scaling parameters between different architectures. We can also easily sweep the base HPs with the following scripts.
+### Scaling Data
+
+To study the data scaling law, we can scale from 100B to 600B tokens for a 1B-parameter Transformer++ model with μP++ and tied embeddings on 64 GPUs using the following script:
+
+```bash
+for tok in 1e11 2e11 3e11 4e11 5e11 6e11; do
+    torchrun --nnodes=8 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} pretrain.py \
+        --train_data_dir path/to/slim_pajama/data  --val_data_dir path/to/slim_pajama/data \
+        --train_model transformer --depth 16 --max_tokens ${tok} \
+        --train_name scaling_mup_tie
+done
+```
+
+### Hyper-parameters Tuning
+We can also easily sweep the base HPs with the following scripts.
 
 ```bash
 for lr in 4e-4 1e-4 1e-3; do
@@ -63,7 +96,7 @@ torchrun --nnodes=1 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${MA
     --train_model transformer --depth 16 --ctx_len 32768 --max_tokens 4e10 \
     --train_name scaling_mup_rbase_varlen
 ```
-where the symbol in the train_name, `rbase`, will trigger the model use a larger RoPE base for long-context training and `varlen` will applies variable length training that seperates documents based on the EOS tokens.
+where the symbol in the train_name, `rbase`, will trigger the model use a larger RoPE base for long-context training and `varlen` will applies variable length training that seperates documents based on the EOS tokens. Our codebase currently supports training with a maximum of 128K sequence length for a d20 model with `--fsdp_save_mem=true`.
 
 For variable length training on Mamba-1 based models, extra dependencies need to be installed:
 

@@ -33,6 +33,7 @@ from lit_gpt.packed_dataset import CombinedDataset, PackedDataset
 from lit_gpt.speed_monitor import SpeedMonitorFabric as Monitor
 from lit_gpt.speed_monitor import estimate_flops
 from lit_gpt.utils import chunked_cross_entropy, num_parameters
+from lit_gpt.fused_linear_cross_entropy import FusedLinearCrossEntropyLoss
 from lightning.pytorch.loggers import MLFlowLogger,WandbLogger
 
 from lit_gpt.optim import Muon_fsdp2
@@ -145,7 +146,7 @@ def setup(
     global model_name, train_config, name, out_dir, ckpt_dir, devices, learning_rate, nodes, train_tokens, \
         global_batch_size, micro_batch_size, total_evals, warmup_tokens, log_step_interval, \
         eval_iters, min_lr, batch_size, gradient_accumulation_steps, log_iter_interval, hparams, \
-        depth_global, weight_decay, eps, beta1, beta2, muon_beta, weight_lr_scale, \
+        depth_global, weight_decay, eps, beta1, beta2, muon_beta, weight_lr_scale, label_smoothing, \
         mup, wandb_logger, seq_len, local_window, num_extrapol, mup_tie, use_cu_seqlen, train_data_config, original_mup
     
     # Update global base_hps if provided
@@ -173,6 +174,7 @@ def setup(
     rope_base = 640_000 if "_rbase_" in train_config else 10_000 # rope base for 32k ctx len
     mup_tie = "mup_tie" in train_config # use mup++ with tied embedding
     use_cu_seqlen = "_varlen" in train_config # use cu_seqlen for variable length training
+    label_smoothing = 0.1 if "_ls_" in train_config else 0.0
     model_name = model_name+"_d"+str(depth)
     
     if seq_len == 4096: # hardcoded for now
@@ -189,18 +191,17 @@ def setup(
     eos_token_id = 2 # llama2 token id
         
     ar = Config.from_name(model_name).ar # model aspect ratio
+    mult = 14.5 * (ar ** 2) # 237568 # transformer
     if "samba" in model_name:
         mult = 15 * (ar ** 2) + 160 * ar
-    if "sambay" in model_name or "sambay2" in model_name:
+    if "sambay" in model_name or "sambay2" in model_name or "phi4miniflash" in model_name:
         mult = 14.5 * (ar ** 2) + 144 * ar
-    if "transformer" in model_name :
-        mult = 14.5 * (ar ** 2) # 237568
     if "sambayoco" in model_name or "sambayattn" in model_name:
         mult = 13.5 * (ar ** 2) + 208 * ar
     if "mambay" in model_name or "gdny" in model_name or "mambay2" in model_name:
         mult = 16 * (ar ** 2) + 64 * ar 
     if "sambaymlp" in model_name:
-        mult = 15.5 * (ar ** 2) + 144 * ar    
+        mult = 15.5 * (ar ** 2) + 144 * ar      
     
     depth_global = depth
     
@@ -504,7 +505,10 @@ def train(fabric, state, train_dataloader, val_dataloader, monitor, resume):
     warmup_iters = warmup_tokens // fabric.world_size // tokens_per_iter
     initial_iter = state["iter_num"]
     curr_iter = 0
-    loss_func = FusedCrossEntropyLoss(label_smoothing=label_smoothing)
+    if model.config.vocab_size > 100_000:
+        loss_func = FusedLinearCrossEntropyLoss(label_smoothing=label_smoothing)
+    else:
+        loss_func = FusedCrossEntropyLoss(label_smoothing=label_smoothing)
     
     for train_data in train_dataloader:
         # resume loader state. This is not elegant but it works. 
@@ -542,9 +546,12 @@ def train(fabric, state, train_dataloader, val_dataloader, monitor, resume):
         targets = train_data[:, 1 : model.config.block_size + 1].contiguous()
 
         with fabric.no_backward_sync(model, enabled=is_accumulating):
-            logits = model(input_ids).logits
-            loss = loss_func(logits, targets)
-            # loss = chunked_cross_entropy(logits, targets, chunk_size=0)
+            if model.config.vocab_size > 100_000:
+                output = model(input_ids)
+                loss = loss_func(output.logits, output.weight, targets)
+            else:
+                logits = model(input_ids).logits
+                loss = loss_func(logits, targets)
             fabric.backward(loss / gradient_accumulation_steps)
         
         state["iter_num"] += 1
