@@ -685,7 +685,7 @@ def create_dataloader(
         filenames = sorted(glob.glob(str(data_dir / f"{prefix}*.bin")))
         random.seed(seed)
         random.shuffle(filenames)
-        use_large_chunk = False
+        use_large_chunk = "phi4miniflash" in model_name
         if split != "train":
             n_chunks = - (8 // -nodes) # ceil division
         else:
