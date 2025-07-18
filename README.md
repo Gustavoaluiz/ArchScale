@@ -41,7 +41,7 @@ torchrun --nnodes=128 --nproc_per_node=8 --rdzv_backend=c10d  --rdzv_endpoint=${
     --train_data_dir path/to/phi4/data \
     --base_hps.eta0=5e-4 --base_hps.b0=8388608 --base_hps.warmup_tokens0=25_165_824_000 \
     --ctx_len 8192 --max_tokens 5e12 --resume="auto" \
-    --train_model phi4miniflash --depth ${depth} \
+    --train_model phi4miniflash --depth 32 \
     --train_name scaling
 ```
 We generally recommend also trying a cleaner architecture with `--train_model sambayda` (need to change the vocab size to 200064) and `--depth 24`, together with μP++ using `--train_name scaling_mup_tie` for better performance and training stability.
