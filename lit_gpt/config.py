@@ -64,7 +64,6 @@ class Config:
     mup_d0: int = 16 # base depth for muP++
     mup: bool = False # use muP++
     mup_hd0: int = 128 # base head dimension for muP++
-    sp_init: bool = False # use Standard Parametrization init
     tied_embed: bool = False # tie embedding
     original_mup: bool = False  # original muP with only width scaling
     n_query_groups: Optional[int] = None # equal to n_kv_heads
@@ -146,7 +145,7 @@ phi4_mini_flash_configs = [
         use_da = True,
         head_dim=64,
         ar = 80,
-        sp_init = True,
+        tied_embed = True,
         _norm_class = "LayerNorm",
         n_query_groups= 20, 
         mlp_expand= 4, 

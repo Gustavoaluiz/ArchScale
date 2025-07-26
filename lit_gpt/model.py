@@ -68,7 +68,6 @@ class GPT(nn.Module):
         assert config.padded_vocab_size is not None
         self.config = config
         self.mup = config.mup
-        self.sp_init = config.sp_init
         
         if config.mup:
             self.logit_scale = config.mup_d0 / config.n_layer 
@@ -91,7 +90,7 @@ class GPT(nn.Module):
         self.max_len = self.config.block_size
         self.scale_embed = config.scale_embed
         self.tied_embed = config.tied_embed
-        if self.tied_embed or self.sp_init:
+        if self.tied_embed:
             self.tie_weights()
 
     def _init_weights(self, module: nn.Module, n_layer) -> None:
@@ -104,7 +103,7 @@ class GPT(nn.Module):
                 std = std /math.sqrt(self.config.n_embd)
             torch.nn.init.normal_(module.weight, std=std)
         elif isinstance(module, nn.Linear):
-            if self.sp_init:
+            if not self.mup:
                 torch.nn.init.normal_(module.weight, std=0.02)
             #truncated_normal_(module.weight, mean=0.0, std=0.02)
             #nn.init.kaiming_normal_(module.weight, nonlinearity="linear")
