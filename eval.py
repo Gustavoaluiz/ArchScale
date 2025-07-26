@@ -110,7 +110,7 @@ def load_model(checkpoint_path, config, device, dtype):
         print(f"{swa_size=}") 
         config.local_window = swa_size 
     config.mup= "_mup_" in checkpoint_path
-    config.mup_tie= "_mup_tie_" in checkpoint_path
+    config.tied_embed= "_tie" in checkpoint_path
     config.rope_base = 640000 if "_rbase_" in checkpoint_path else 10000
     m = re.search(r"_ctx(\d+)", checkpoint_path)
     if m:

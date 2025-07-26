@@ -79,7 +79,7 @@ devices = torch.cuda.device_count() or 1
 label_smoothing = 0.0
 
 mup = False
-mup_tie = False
+tied_embed = False
 original_mup = False
 use_cu_seqlen = False
 
@@ -147,7 +147,7 @@ def setup(
         global_batch_size, micro_batch_size, total_evals, warmup_tokens, log_step_interval, \
         eval_iters, min_lr, batch_size, gradient_accumulation_steps, log_iter_interval, hparams, \
         depth_global, weight_decay, eps, beta1, beta2, muon_beta, weight_lr_scale, label_smoothing, \
-        mup, wandb_logger, seq_len, local_window, num_extrapol, mup_tie, use_cu_seqlen, train_data_config, original_mup
+        mup, wandb_logger, seq_len, local_window, num_extrapol, tied_embed, use_cu_seqlen, train_data_config, original_mup
     
     # Update global base_hps if provided
     if base_hps is not None:
@@ -172,7 +172,7 @@ def setup(
     mup= "mup" in train_config # use mup++
     original_mup = "_ori_mup" in train_config # use original mup
     rope_base = 640_000 if "_rbase_" in train_config else 10_000 # rope base for 32k ctx len
-    mup_tie = "mup_tie" in train_config # use mup++ with tied embedding
+    tied_embed = "_tie" in train_config # use tied embedding
     use_cu_seqlen = "_varlen" in train_config # use cu_seqlen for variable length training
     label_smoothing = 0.1 if "_ls_" in train_config else 0.0
     model_name = model_name+"_d"+str(depth)
@@ -285,7 +285,7 @@ def setup(
 
     overides = {"mup": mup, "mup_d0": base_hps.d0, 
             "mup_hd0": base_hps.hd0, "w_init0": base_hps.w_init0, "block_size": seq_len,
-            "mup_tie": mup_tie, "use_cu_seqlen": use_cu_seqlen,
+            "tied_embed": tied_embed, "use_cu_seqlen": use_cu_seqlen,
             "original_mup": original_mup,
             "rope_base": rope_base,
             "eos_token_id": eos_token_id,

@@ -65,7 +65,7 @@ class Config:
     mup: bool = False # use muP++
     mup_hd0: int = 128 # base head dimension for muP++
     sp_init: bool = False # use Standard Parametrization init
-    mup_tie: bool = False # mup++ with tied embedding
+    tied_embed: bool = False # tie embedding
     original_mup: bool = False  # original muP with only width scaling
     n_query_groups: Optional[int] = None # equal to n_kv_heads
     _norm_class: Literal["LayerNorm", "RMSNorm","FusedRMSNorm"] = "FusedRMSNorm"

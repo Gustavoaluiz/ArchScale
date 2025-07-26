@@ -69,7 +69,6 @@ class GPT(nn.Module):
         self.config = config
         self.mup = config.mup
         self.sp_init = config.sp_init
-        self.mup_tie = config.mup_tie
         
         if config.mup:
             self.logit_scale = config.mup_d0 / config.n_layer 
@@ -91,11 +90,10 @@ class GPT(nn.Module):
         self.kv_caches: List[KVCache] = []
         self.max_len = self.config.block_size
         self.scale_embed = config.scale_embed
-        self.tied_embed = False
-        if self.sp_init or self.mup_tie:
+        self.tied_embed = config.tied_embed
+        if self.tied_embed or self.sp_init:
             self.tie_weights()
-            self.tied_embed = True
-                
+
     def _init_weights(self, module: nn.Module, n_layer) -> None:
         """Meant to be used with `gpt.apply(gpt._init_weights)`."""
         if isinstance(module, nn.Embedding):
