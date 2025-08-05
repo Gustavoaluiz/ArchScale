@@ -236,7 +236,7 @@ class SpeedMonitorBase:
     ):
         self.iter += 1
         metrics = {}
-        if model.layer_configurator is not None:
+        if hasattr(model, "layer_configurator") and model.layer_configurator is not None:
             spar = (model.layer_configurator.gate==0).float().mean().item()
             self.history_train_sparsity.append(spar)
         self.history_samples.append(samples)
@@ -270,7 +270,7 @@ class SpeedMonitorBase:
                         "total_tokens": avg_length * world_size * samples,
                     }
                 )
-                if model.layer_configurator is not None:
+                if hasattr(model, "layer_configurator") and model.layer_configurator is not None:
                     avg_spar = sum(self.history_train_sparsity) / len(self.history_train_sparsity)
                     metrics.update(
                         {
