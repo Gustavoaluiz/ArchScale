@@ -137,7 +137,7 @@ python eval.py --model ArchScale \
 This runs a simple needle-in-a-haystack task at 32K context length.
 
 #### Phonebook Evaluation
-Test long-context retrieval using the Phonebook benchmark with 32K context length:
+Test long-context retrieval using the [Phonebook](https://arxiv.org/abs/2402.01032) benchmark with 32K context length:
 
 ```bash
 python eval_phonebook.py \
