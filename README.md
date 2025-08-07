@@ -125,7 +125,7 @@ The script will infer the μP++ and architecture modification based on name of c
 ### Long-Context Evaluation
 
 #### RULER Benchmark
-Evaluate long-context capabilities using the RULER benchmark:
+Evaluate long-context capabilities using the [RULER](https://arxiv.org/abs/2404.06654) benchmark:
 
 ```bash
 python eval.py --model ArchScale \
