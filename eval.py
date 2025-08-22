@@ -27,8 +27,11 @@ class ModelWrapper(torch.nn.Module):
         
     def forward(self, input_ids, attention_mask=None, **kwargs):
         return self.model(input_ids, attn_mask=attention_mask, **kwargs)
-        
-    @torch.compile
+    
+    def tie_weights(self):
+        return 
+    
+    # @torch.compile
     @torch.no_grad()   
     def generate(
         self,
@@ -39,6 +42,7 @@ class ModelWrapper(torch.nn.Module):
         pad_token_id=None,
         eos_token_id=None,
         do_sample=False,
+        temperature=None,
         tokenizer=None,
         stopping_criteria=None,
         use_cache=False,
@@ -70,7 +74,10 @@ class ModelWrapper(torch.nn.Module):
 
             if do_sample:
                 # Sample from the distribution
-                probs = F.softmax(next_token_logits, dim=-1)
+                logits_for_sampling = next_token_logits
+                if temperature is not None and temperature > 0:
+                    logits_for_sampling = logits_for_sampling / float(temperature)
+                probs = F.softmax(logits_for_sampling, dim=-1)
                 next_tokens = torch.multinomial(probs, num_samples=1)
             else:
                 # Greedy decoding
@@ -131,37 +138,64 @@ class ArchScaleEvalWrapper(HFLM):
     AUTO_MODEL_CLASS = transformers.AutoModelForCausalLM
 
     def __init__(self, pretrained=None, config=None, max_length=4096, batch_size=1, device="cuda",
-                 dtype=torch.bfloat16, trust_remote_code=True,tokenizer="Orkhan/llama-2-7b-absa"):
-        LM.__init__(self)
-        self.backend = "causal"
-        self.revision = "main"
-        self.pretrained = pretrained
-        self.delta = None
-        self.peft = None
-        self.batch_schedule = 1
-        self.batch_sizes = {}
-        self.max_batch_size = 64
-        self.batch_size_per_gpu = int(batch_size)
-        self.softmax_dtype = torch.float32
-        # tokenizer_name = "meta-llama/Llama-2-7b"
-        self.custom_prefix_token_id = None
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                 dtype=torch.bfloat16, backend="causal", softmax_dtype=torch.float32, trust_remote_code=True,
+                 tokenizer="Orkhan/llama-2-7b-absa", **kwargs): # if not, use dtype=torch.float16/bfloat16/float32
+        super().__init__(pretrained=pretrained, config=config, max_length=max_length, batch_size=batch_size, device=device,
+                 dtype=dtype, backend=backend, softmax_dtype=softmax_dtype,
+                 trust_remote_code=trust_remote_code, tokenizer=tokenizer, **kwargs) 
 
-        self._model = load_model(pretrained, config, device, dtype)
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, trust_remote_code=True)
-        self.add_bos_token = False
-        self.logits_cache = False
-        self.truncation = True
-        self.trust_remote_code = True
-        self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
-        self.vocab_size = self.tokenizer.vocab_size
-        self._batch_size = int(batch_size) if batch_size is not None else 64
-        self._max_length = max_length
-        self._device = torch.device(device)
+    def _get_config(
+        self,
+        pretrained: str,
+        revision: str = "main",
+        trust_remote_code: bool = False,
+        gguf_file: str | None = None,
+        subfolder: str = "",
+    ) -> None:
+        self._config = None
+      
+  
+    def _create_model(
+        self,
+        pretrained: str,
+        revision: str | None = "main",
+        dtype: str | torch.dtype | None = "auto",
+        trust_remote_code: bool | None = False,
+        # arguments used for splitting a model across GPUs naively.
+        # only used if `parallelize=True`.
+        # (accelerate naive PP (device_map) options)
+        parallelize: bool | None = False,
+        gpus: int | None = None,
+        max_memory_per_gpu: int | str | None = None,
+        max_cpu_memory: int | str | None = None,
+        offload_folder: str | None = "./offload",
+        # PEFT, delta weights and quantization options
+        peft: str | None = None,
+        delta: str | None = None,
+        autogptq: bool | str | None = False,
+        gptqmodel: bool | None = False,
+        gguf_file: str | None = None,
+        quantization_config: None = None,
+        subfolder: str = "",
+        **kwargs,
+    ) -> None:
+        """Initializes an HF or HF-compatible PreTrainedModel from scratch
+        inside HFLM, using the kwargs passed into self.__init__().
 
-    @property
-    def batch_size(self):
-        return self._batch_size
+        Also handles functionality such as AutoGPTQ usage and PEFT wrapping.
+
+        For future similar extensions to AutoGPTQ that are not core to HF's ecosystem,
+        (such as PyTorch models that are nearly, but not quite, fully mirroring
+        HF's public interface relied on in this HFLM class)
+        please consider subclassing HFLM and overriding this and other methods as needed.
+        """
+        if hasattr(self, "accelerator"):
+            device = self.accelerator.device
+        else:
+            device = str(self.device)
+            
+        self._model = load_model(pretrained, kwargs.get("config"), device, dtype)
+
 
     def _model_generate(self, context, max_length, stop, **generation_kwargs):
         # temperature = 0.0 if not set

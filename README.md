@@ -112,10 +112,10 @@ ArchScale provides comprehensive evaluation support for trained models across mu
 
 ### Standard NLP Benchmarks
 
-Evaluate trained models on common language understanding tasks for SambaY architecture:
+Evaluate trained models on common language understanding tasks for SambaY architecture with multiple GPUs:
 
 ```bash
-python eval.py --model ArchScale \
+accelerate launch eval.py --model ArchScale \
     --model_args pretrained=path/to/checkpoint.pth,config="sambay_d16" \
     --tasks wikitext,lambada_openai,arc_easy,arc_challenge,winogrande,hellaswag,piqa,social_iqa \
     --device cuda --batch_size 16 --trust_remote_code
@@ -125,10 +125,10 @@ The script will infer the μP++ and architecture modification based on name of c
 ### Long-Context Evaluation
 
 #### RULER Benchmark
-Evaluate long-context capabilities using the [RULER](https://arxiv.org/abs/2404.06654) benchmark:
+Evaluate long-context capabilities using the [RULER](https://arxiv.org/abs/2404.06654) benchmark with multiple GPUs:
 
 ```bash
-python eval.py --model ArchScale \
+accelerate launch eval.py --model ArchScale \
     --model_args pretrained=path/to/checkpoint.pth,config="sambay_d16",max_length=32768,tokenizer=Orkhan/llama-2-7b-absa \
     --metadata='{"max_seq_lengths":[32768]}' \
     --tasks niah_single_1 --device cuda --batch_size 8 --trust_remote_code
