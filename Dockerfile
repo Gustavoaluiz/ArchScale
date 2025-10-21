@@ -1,29 +1,70 @@
 FROM nvcr.io/nvidia/pytorch:24.10-py3
+
+ARG FLASH_ATTN_VERSION=2.4.2
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_ROOT_USER_ACTION=ignore
+
 WORKDIR /app
-RUN apt-get update && apt-get -y install sudo
-RUN pip install --upgrade pip
-RUN pip install --user azureml-mlflow tensorboard
-RUN pip install packaging lightning
-RUN pip install jsonargparse[signatures] tokenizers sentencepiece wandb torchmetrics
-RUN pip install tensorboard zstandard pandas pyarrow huggingface_hub
-RUN pip install -U flash-attn --no-build-isolation
-RUN git clone https://github.com/Dao-AILab/flash-attention
-WORKDIR flash-attention
-WORKDIR csrc/rotary
-RUN pip install .
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip install --upgrade pip
+
+RUN python -m pip install \
+        packaging \
+        lightning \
+        jsonargparse[signatures] \
+        tokenizers \
+        sentencepiece \
+        wandb \
+        torchmetrics \
+        tensorboard \
+        zstandard \
+        pandas \
+        pyarrow \
+        huggingface_hub
+
+RUN python -m pip install \
+        azureml-mlflow \
+        azureml-core \
+        azure-identity
+
+RUN python -m pip install \
+        flash-attn==${FLASH_ATTN_VERSION} \
+        --no-build-isolation
+
+RUN git clone --depth 1 --branch v${FLASH_ATTN_VERSION} \
+        https://github.com/Dao-AILab/flash-attention \
+        flash-attention
+
+WORKDIR flash-attention/csrc/rotary
+RUN python -m pip install .
+
 WORKDIR ../layer_norm
-RUN pip install .
+RUN python -m pip install .
+
 WORKDIR ../xentropy
-RUN pip install .
+RUN python -m pip install .
+
 WORKDIR /app
-RUN pip install transformers==4.46.1 numpy
-RUN pip install causal-conv1d
-RUN pip install mamba-ssm --no-build-isolation
-RUN pip install torchao --extra-index-url https://download.pytorch.org/whl/cu126
-RUN pip install triton==3.1.0
-RUN pip install einops
-RUN pip install opt_einsum
-RUN pip install git+https://github.com/renll/flash-linear-attention.git
-RUN pip install lm-eval["ruler"]
-RUN pip install azureml-core
-RUN pip install liger_kernel==0.4.0
+
+RUN python -m pip install transformers==4.46.1 numpy
+
+RUN python -m pip install causal-conv1d
+
+RUN python -m pip install mamba-ssm --no-build-isolation
+
+RUN python -m pip install torchao --extra-index-url https://download.pytorch.org/whl/cu126
+
+RUN python -m pip install triton==3.1.0
+
+RUN python -m pip install einops opt_einsum
+
+RUN python -m pip install git+https://github.com/renll/flash-linear-attention.git
+
+RUN python -m pip install "lm-eval[ruler]"
+
+RUN python -m pip install liger_kernel==0.4.0
