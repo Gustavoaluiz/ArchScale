@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:24.06-py3
+FROM nvcr.io/nvidia/pytorch:24.05-py3
 WORKDIR /app
 RUN apt-get update && apt-get -y install sudo
 RUN pip install --upgrade pip
