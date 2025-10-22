@@ -133,8 +133,9 @@ def setup(
     resume: Union[bool, Literal["auto"], Path] = False,
     train_model: str = None,
     train_name: str = "scaling_mup_tie_rbase_prolong_varlen",
-    #"scaling_mup_tie_rbase_prolong_varlen", "scaling_mup", 
+    #"scaling_mup_tie_rbase_prolong_varlen", "scaling_mup",
     depth: int = 16,
+    transformer_ar: Optional[int] = None,
     max_tokens: float = None,
     ctx_len: int = None,
     swa_len: int = None,
@@ -188,7 +189,14 @@ def setup(
         
     eos_token_id = 2 # llama2 token id
         
-    ar = Config.from_name(model_name).ar # model aspect ratio
+    # Inspect the default configuration to determine the aspect ratio
+    # and optionally override it for width matching experiments.
+    default_config = Config.from_name(model_name)
+    ar = default_config.ar
+    config_overrides = {}
+    if transformer_ar is not None:
+        ar = transformer_ar
+        config_overrides["ar"] = transformer_ar
     mult = 14.5 * (ar ** 2) # 237568 # transformer
     if "samba" in model_name:
         mult = 15 * (ar ** 2) + 160 * ar
@@ -281,13 +289,14 @@ def setup(
     fabric.launch()
     fabric.print(hparams)
 
-    overides = {"mup": mup, "mup_d0": base_hps.d0, 
+    overides = {"mup": mup, "mup_d0": base_hps.d0,
             "mup_hd0": base_hps.hd0, "w_init0": base_hps.w_init0, "block_size": seq_len,
             "use_cu_seqlen": use_cu_seqlen,
             "original_mup": original_mup,
             "rope_base": rope_base,
             "eos_token_id": eos_token_id,
             }
+    overides.update(config_overrides)
     if swa_len is not None:
         overides["local_window"] = swa_len
     if "_tie" in train_config: # use tied embedding

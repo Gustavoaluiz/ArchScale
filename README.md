@@ -87,6 +87,36 @@ done
 Note that in this case, the learning rate is tuned for the d16, 1.0B model with 100B training tokens, but the actual training is conducted at a d8 model with around 12B tokens, thanks to μP++ for scaling down the computation cost of HPs sweeping. Models are defined in [`lit_gpt/config.py`](lit_gpt/config.py) with architecture-specific HPs.
 
 
+### Matching Transformer++ parameter counts
+
+When comparing Transformer++ models against SambaY it is often useful to
+match the parameter budgets.  The helper script
+[`scripts/match_transformer_params.py`](scripts/match_transformer_params.py)
+scans different aspect ratios (`ar`) and reports the width that is closest to
+the target model:
+
+```bash
+python scripts/match_transformer_params.py \
+    --target-model sambay --target-depth 8 \
+    --base-model transformer --base-depth 8 \
+    --tie-embed
+```
+
+The recommended `ar` can then be passed to `pretrain.py` via the new
+`--transformer_ar` flag, for example:
+
+```bash
+torchrun --standalone --nproc_per_node=1 pretrain.py \
+    --train_model transformer --depth 8 \
+    --train_name scaling_mup_tie --transformer_ar 106 \
+    --train_data_dir /path/to/slimpajama_packed --val_data_dir /path/to/slimpajama_packed
+```
+
+Using `--train_name` with the `_tie` suffix keeps the embeddings tied and
+reduces the parameter count to roughly 110 M, which closely matches
+`sambay_d8` for fair ablations.
+
+
 ## Long-Context Training
 
 After shuffling and pre-tokenizing the [ProLong-64K](https://huggingface.co/datasets/princeton-nlp/prolong-data-64K) data (Pre-tokenized data is [here](https://huggingface.co/datasets/jsun/Prolong_64K_v2_Llama2_Tokenizer)!), we can train a d16 model with 32K sequence length and 40B tokens on 8 GPUs using the following script:  
