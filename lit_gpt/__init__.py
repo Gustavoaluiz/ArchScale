@@ -4,10 +4,7 @@
 # Copyright Lightning AI. Licensed under the Apache License 2.0,
 # see LICENSE file at https://github.com/Lightning-AI/litgpt/blob/main/LICENSE
 
-from lit_gpt.model import GPT
-from lit_gpt.config import Config
-from lit_gpt.tokenizer import Tokenizer
-from lit_gpt.fused_cross_entropy import FusedCrossEntropyLoss
+from importlib import import_module
 from lightning_utilities.core.imports import RequirementCache
 
 if not bool(RequirementCache("torch>=2.1.0dev")):
@@ -23,4 +20,16 @@ if not bool(_LIGHTNING_AVAILABLE):
     )
 
 
-__all__ = ["GPT", "Config", "Tokenizer"]
+__all__ = ["GPT", "Config", "Tokenizer", "FusedCrossEntropyLoss"]
+
+
+def __getattr__(name):
+    if name == "GPT":
+        return import_module("lit_gpt.model").GPT
+    if name == "Config":
+        return import_module("lit_gpt.config").Config
+    if name == "Tokenizer":
+        return import_module("lit_gpt.tokenizer").Tokenizer
+    if name == "FusedCrossEntropyLoss":
+        return import_module("lit_gpt.fused_cross_entropy").FusedCrossEntropyLoss
+    raise AttributeError(f"module 'lit_gpt' has no attribute {name!r}")
