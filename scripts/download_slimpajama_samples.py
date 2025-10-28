@@ -20,13 +20,15 @@ def main():
 
     allow = []
     for prefix, k in BUDGET.items():
-        cand = sorted(f for f in files if f.startswith(prefix) and f.endswith(".jsonl.zst"))
-        if not cand:
-            print(f"[warn] sem arquivos em {prefix}")
-            continue
-
-        take = random.sample(cand, k=min(k, len(cand)))
-        allow.extend(take)
+        if k in ("all", -1, None):
+            allow.append(f"{prefix}*.jsonl.zst")  # pega tudo do chunk
+        else:
+            cand = sorted(f for f in files if f.startswith(prefix) and f.endswith(".jsonl.zst"))
+            if not cand:
+                print(f"[warn] sem arquivos em {prefix}")
+                continue
+            take = random.sample(cand, k=min(k, len(cand)))
+            allow.extend(take)
 
     if not allow:
         raise SystemExit("Nada a baixar (verifique prefixes em BUDGET).")
