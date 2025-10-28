@@ -9,9 +9,11 @@ HDR_MAGIC = b"LITPKDS"
 
 """
 Example
-  python count_tokens.py \
-    --destination_path /home/jovyan/persist/datasets/slimpajama_packed \
-    --glob_pattern "train_slimpajama_*_*.bin"
+python count_tokens.py /home/jovyan/persist/datasets/slimpajama_packed \
+  --glob_pattern "train_slimpajama_*_*.bin"
+
+python count_tokens.py /home/jovyan/persist/datasets/slimpajama_packed \
+  --glob_pattern "validation_slimpajama_*_*.bin"
 """
 
 def read_chunk_size(path: Path) -> int:
