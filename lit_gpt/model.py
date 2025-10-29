@@ -33,7 +33,10 @@ pad_input = torch.compiler.disable(pad_input)
 
 from .mamba2 import Mamba2
 from .gated_memory_unit import swiglu, GMUWrapper
-from .gated_deltanet import GatedDeltaNet
+try:
+    from .gated_deltanet import GatedDeltaNet  
+except Exception:
+    GatedDeltaNet = None
 import copy
 from collections import namedtuple
 
