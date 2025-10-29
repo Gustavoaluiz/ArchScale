@@ -1,10 +1,3 @@
-set -euo pipefail
-
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Este script deve ser executado como root (use sudo)." >&2
-  exit 1
-fi
-
 export PIP_DISABLE_PIP_VERSION_CHECK=1
 
 
@@ -12,12 +5,16 @@ export PIP_DISABLE_PIP_VERSION_CHECK=1
 python3 -m pip install --upgrade pip
 PIP="python3 -m pip"
 
+conda install -y gcc_linux-64 gxx_linux-64 &&
+conda install cuda -c nvidia 
+
 # Instalações de Python (na ordem do Dockerfile)
 $PIP install azureml-mlflow tensorboard
 $PIP install packaging lightning
 $PIP install 'jsonargparse[signatures]' tokenizers sentencepiece wandb torchmetrics
 $PIP install tensorboard zstandard pandas pyarrow huggingface_hub
-$PIP install -U flash-attn --no-build-isolation
+$PIP -U --no-build-isolation --no-cache-dir \
+  'https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl'
 
 # flash-attention (componentes específicos)
 if [ ! -d flash-attention ]; then
@@ -28,6 +25,7 @@ cd flash-attention
 cd csrc/layer_norm
 $PIP install .
 cd ..
+# python -m pip install --no-build-isolation --no-cache-dir -v .
 
 git checkout 413d07e
 
@@ -39,15 +37,15 @@ git checkout main
 cd /app
 
 # Demais libs
-$PIP install transformers==4.46.1 numpy
-$PIP install causal-conv1d
+$PIP install transformers==4.46.1 numpy accelerate
+$PIP install causal-conv1d --no-build-isolation
 $PIP install mamba-ssm --no-build-isolation
-$PIP install torchao --extra-index-url https://download.pytorch.org/whl/cu124
-$PIP install triton==3.2.0
-$PIP install einops
-$PIP install opt_einsum
+# $PIP install torchao --extra-index-url https://download.pytorch.org/whl/cu128
+# $PIP install triton==3.2.0
+# $PIP install einops
+# $PIP install opt_einsum
 $PIP install git+https://github.com/renll/flash-linear-attention.git
-$PIP install 'lm-eval["ruler"]'
+$PIP install 'lm-eval[ruler]'
 $PIP install azureml-core
 $PIP install liger_kernel==0.4.0
 
