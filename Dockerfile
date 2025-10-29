@@ -12,11 +12,11 @@ RUN pip install tensorboard zstandard pandas pyarrow huggingface_hub
 RUN pip install -U flash-attn --no-build-isolation
 RUN git clone https://github.com/Dao-AILab/flash-attention
 WORKDIR flash-attention
-WORKDIR csrc/layer_norm
-RUN pip install . --no-build-isolation
-WORKDIR ../
+# WORKDIR csrc/layer_norm
+# RUN pip install . --no-build-isolation
+# WORKDIR ../
 RUN git checkout 413d07e
-WORKDIR xentropy
+WORKDIR csrc/xentropy
 RUN pip install .
 WORKDIR ../
 RUN git checkout main
