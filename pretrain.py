@@ -21,7 +21,7 @@ from lightning.fabric.strategies import ModelParallelStrategy
 from torch.distributed._composable.fsdp.fully_shard import fully_shard
 from torch.distributed.device_mesh import DeviceMesh
 from torch.utils.data import DataLoader
-from torchao.float8 import Float8LinearConfig, convert_to_float8_training
+# from torchao.float8 import Float8LinearConfig, convert_to_float8_training
 import json
 from dataclasses import dataclass, field
 
