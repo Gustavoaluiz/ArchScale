@@ -5,10 +5,12 @@
 # Adapted from https://github.com/NVIDIA/apex/blob/master/apex/contrib/layer_norm/layer_norm.py AND https://github.com/Dao-AILab/flash-attention/blob/7a983df74215e035e566e37125b0a71e3618f39d/flash_attn/ops/layer_norm.py#L16
 
 import torch
-import dropout_layer_norm
-import torch
+try:
+    import dropout_layer_norm  # backend legado (csrc); mantido só para compatibilidade passiva
+except Exception:
+    dropout_layer_norm = None  # type: ignore
 from torch.nn import init
-
+from flash_attn.ops.triton.layer_norm import layer_norm_fn as _triton_layer_norm_fn, rms_norm_fn as _triton_rms_norm_fn
 
 def maybe_align(x, alignment_in_bytes=16):
     """Assume that x already has last dim divisible by alignment_in_bytes"""
@@ -659,8 +661,7 @@ class DropoutAddLayerNormParallelResidualFn(torch.autograd.Function):
 
 
 def layer_norm(x, weight, bias, epsilon):
-    return DropoutAddLayerNormFn.apply(x, None, weight, bias, None, None, 0.0, epsilon, False)
-
+    return _triton_layer_norm_fn(x, weight, bias, eps=epsilon)
 
 def dropout_add_layer_norm(
     x0,
@@ -804,9 +805,8 @@ class DropoutAddLayerNorm(torch.nn.Module):
         )
         
 def rms_norm(x, weight, epsilon):
-    return DropoutAddLayerNormFn.apply(
-        x, None, weight, None, None, None, 0.0, epsilon, False, False, True
-    )
+    return _triton_rms_norm_fn(x, weight, None, eps=epsilon)
+    
 class FusedRMSNorm(torch.nn.Module):
     def __init__(self, size: int, dim: int = -1, eps: float = 1e-5):
         super().__init__()
