@@ -11,9 +11,12 @@ RUN git clone https://github.com/Dao-AILab/flash-attention
 WORKDIR flash-attention
 WORKDIR csrc/layer_norm
 RUN pip install .
-
-# WORKDIR ../xentropy
-# RUN pip install .
+WORKDIR ../
+RUN git checkout 413d07e
+WORKDIR xentropy
+RUN pip install .
+WORKDIR ../
+RUN git checkout main
 WORKDIR /app
 RUN pip install transformers==4.46.1 numpy
 RUN pip install causal-conv1d
