@@ -19,7 +19,6 @@ import torch.distributed as dist
 from torch import Tensor
 import os
 
-@torch.compile(fullgraph=True)
 def nsloop_torch(X: torch.Tensor, steps: int, *, a=3.4445, b=-4.7750, c=2.0315):
     """
     When compiled down, inductor produces the following steps:
@@ -35,6 +34,8 @@ def nsloop_torch(X: torch.Tensor, steps: int, *, a=3.4445, b=-4.7750, c=2.0315):
         X = a * X + B @ X
     return X
 
+if os.getenv("TORCH_COMPILE_DISABLE", "0") != "1" and hasattr(torch, "compile"):
+    nsloop_torch = torch.compile(nsloop_torch, fullgraph=True)
 
 def zeropower_via_newtonschulz(G, steps=10, eps=1e-7, f_iter=nsloop_torch):
     X = G.bfloat16()
