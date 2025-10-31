@@ -90,6 +90,7 @@ def prepare(
     filenames = filenames[:int(len(filenames) * percentage)]
     
     num_processes = cpu_count() 
+    # num_processes = 1
     chunked_filenames = np.array_split(filenames, num_processes)
 
     processes = []
