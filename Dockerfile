@@ -1,11 +1,13 @@
-FROM nvcr.io/nvidia/pytorch:24.10-py3
+FROM nvcr.io/nvidia/pytorch:24.10-py3  
+# IMAGE WITH TORCH2.5 PY310 CUDA 12.6
 WORKDIR /app
 
 ENV MAX_JOBS=8
 
-ARG CAUSAL_CONV1D_WHL_URL="https://github.com/Dao-AILab/causal-conv1d/releases/download/v1.5.4/causal_conv1d-1.5.4+cu12torch2.5cxx11abiTRUE-cp310-cp310-linux_x86_64.whl"
+# URLS should be selected based on your CUDA, PyTorch and Python versions
+ARG CAUSAL_CONV1D_WHL_URL="https://github.com/Dao-AILab/causal-conv1d/releases/download/v1.4.0/causal_conv1d-1.4.0+cu122torch2.4cxx11abiTRUE-cp310-cp310-linux_x86_64.whl"
 ARG MAMBA_SSM_WHL_URL="https://github.com/state-spaces/mamba/releases/download/v2.2.6.post3/mamba_ssm-2.2.6.post3+cu12torch2.5cxx11abiTRUE-cp310-cp310-linux_x86_64.whl"
-ARG FLASH_ATTN_WHL_URL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.5cxx11abiTRUE-cp310-cp310-linux_x86_64.whl"
+ARG FLASH_ATTN_WHL_URL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.8/flash_attn-2.5.8+cu122torch2.3cxx11abiTRUE-cp310-cp310-linux_x86_64.whl"
 
 RUN apt-get update && apt-get -y install sudo
 RUN pip install -U pip setuptools wheel packaging ninja
@@ -15,29 +17,26 @@ RUN pip install "jsonargparse[signatures]" tokenizers sentencepiece wandb torchm
 RUN pip install tensorboard zstandard pandas pyarrow huggingface_hub
 RUN pip install --no-cache-dir "$FLASH_ATTN_WHL_URL"
 RUN git clone https://github.com/Dao-AILab/flash-attention
-WORKDIR flash-attention
-# WORKDIR csrc/layer_norm
-# RUN pip install . --no-build-isolation
-# WORKDIR ../
+
+WORKDIR flash-attention/
+
 RUN git checkout 413d07e
-WORKDIR csrc/xentropy
+WORKDIR xentropy
 RUN python3 -m pip install . --no-build-isolation
 WORKDIR ../
+
 RUN git checkout main
 WORKDIR /app
 RUN pip install transformers==4.46.1 numpy accelerate
 
-# torch2.5 cp310 linux_x86_64 cu12 (ou cu126) cxx11abiTRUE
 RUN pip install --no-cache-dir "$CAUSAL_CONV1D_WHL_URL"
-
-
 RUN pip install --no-cache-dir "$MAMBA_SSM_WHL_URL"
 
 
 # RUN pip install torchao --extra-index-url https://download.pytorch.org/whl/cu128
 # RUN pip install triton
-RUN pip install einops
-RUN pip install opt_einsum
+# RUN pip install einops
+# RUN pip install opt_einsum
 RUN pip install git+https://github.com/renll/flash-linear-attention.git
 RUN pip install lm-eval["ruler"]
 RUN pip install azureml-core
