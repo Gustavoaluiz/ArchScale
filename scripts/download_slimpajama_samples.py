@@ -6,10 +6,10 @@ from huggingface_hub import list_repo_files, snapshot_download
 REPO = "cerebras/SlimPajama-627B"
 OUT = Path(r"/home/jovyan/persist/datasets/slimpajama/raw")  
 BUDGET = {
-    "train/chunk1/": 200,    
+    "train/chunk1/": 200,  # 2.2 B tokens
     # você pode distribuir para reduzir viés:
     # "train/chunk1/": 70, "train/chunk2/": 70, "train/chunk3/": 60,
-    "validation/chunk1/": 100,
+    "validation/chunk1/": "all",  # 27M tokens
 }
 RANDOM_SEED = 42
 MAX_WORKERS = 6  # paralelismo do download
