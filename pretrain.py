@@ -272,14 +272,28 @@ def setup(
         # todo: currently muon_fsdp2 only works for transformer, need to support other archs
         strategy = ModelParallelStrategy(data_parallel_size=devices*nodes, tensor_parallel_size=1, parallelize_fn=configure_model)
     else:
+        world_size = devices * nodes
+        print(f"world_size = {world_size}")
         if fsdp_save_mem:
-            strategy = FSDPStrategy(auto_wrap_policy={Block}, activation_checkpointing_policy={Block}, sharding_strategy = "HYBRID_SHARD", cpu_offload=True, state_dict_type="full")
-            #strategy = FSDPStrategy(auto_wrap_policy={Block}, activation_checkpointing_policy={Block}, sharding_strategy = "HYBRID_SHARD", cpu_offload=False, state_dict_type="full")
+            if world_size == 1:
+                strategy = 'auto'  # evita FSDP+offload em 1 GPU
+            else:
+                strategy = FSDPStrategy(auto_wrap_policy={Block}, activation_checkpointing_policy={Block}, sharding_strategy = "HYBRID_SHARD", cpu_offload=True, state_dict_type="full")
+                #strategy = FSDPStrategy(auto_wrap_policy={Block}, activation_checkpointing_policy={Block}, sharding_strategy = "HYBRID_SHARD", cpu_offload=False, state_dict_type="full")
         else:
-            strategy = FSDPStrategy(auto_wrap_policy={Block}, state_dict_type="full",sharding_strategy = "HYBRID_SHARD")
+            if world_size == 1:
+                strategy = 'auto'  # evita FSDP em 1 GPU
+            else:
+                strategy = FSDPStrategy(auto_wrap_policy={Block}, state_dict_type="full",sharding_strategy = "HYBRID_SHARD")
     fabric = L.Fabric(devices=devices, num_nodes=nodes, strategy=strategy, precision="bf16-mixed", loggers=[wandb_logger])
     fabric.launch()
     fabric.print(hparams)
+    # Diagnóstico do runtime / CUDA
+    fabric.print(f"fabric.device = {fabric.device}")
+    fabric.print(f"world_size={fabric.world_size} nodes={nodes} devices={devices}")
+    fabric.print(f"torch.cuda.is_available() = {torch.cuda.is_available()}")
+    fabric.print(f"torch.cuda.device_count() = {torch.cuda.device_count()}")
+    
 
     overides = {"mup": mup, "mup_d0": base_hps.d0, 
             "mup_hd0": base_hps.hd0, "w_init0": base_hps.w_init0, "block_size": seq_len,
@@ -393,6 +407,8 @@ def main(fabric, train_data_dir, val_data_dir, resume, fsdp_save_mem, **overides
         model = GPT(config)
         model.apply(partial(model._init_weights ,n_layer=config.n_layer))
  
+    print(f"fabric.device = {fabric.device}")
+    model.to(fabric.device, non_blocking=True)
 
     fabric.print(f"Time to instantiate model: {time.perf_counter() - t0:.02f} seconds.")
     fabric.print(f"Total parameters {num_parameters(model):,}")
@@ -402,9 +418,13 @@ def main(fabric, train_data_dir, val_data_dir, resume, fsdp_save_mem, **overides
     if not "muon" in train_config and not fsdp_save_mem:
         model = torch.compile(model) # comment this out for TP 
     model = fabric.setup(model)
+    first_param = next(model.parameters())
+    fabric.print(f"fabric.device = {fabric.device}, model param device = {first_param.device}")
+    assert fabric.device.type == "cuda", "Fabric não iniciou em CUDA"
+    assert first_param.device.type == "cuda", "Parâmetros não estão em CUDA após setup()"
     if mup:
         param_groups = get_param_groups(model)
-        fabric.print(param_groups)
+        # fabric.print(param_groups)
         
         if "hadam" in train_config:
             optimizer1 = torch.optim.AdamW(
