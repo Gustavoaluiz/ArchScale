@@ -141,12 +141,19 @@ def setup(
     data_mixture: str = None,
     fsdp_save_mem: bool = False,
     base_hps: BaseHyperparameters = None,
+    cli_total_evals: Optional[int] = None,
+    cli_save_step_interval: Optional[int] = None,
+    cli_eval_step_interval: Optional[int] = None,
+    cli_log_step_interval: Optional[int] = None,
+    cli_micro_batch_size: Optional[int] = None,
+    cli_num_extrapol: Optional[int] = None,
 ) -> None:
     global model_name, train_config, name, out_dir, ckpt_dir, devices, learning_rate, nodes, train_tokens, \
         global_batch_size, micro_batch_size, total_evals, warmup_tokens, log_step_interval, \
         eval_iters, min_lr, batch_size, gradient_accumulation_steps, log_iter_interval, hparams, \
         depth_global, weight_decay, eps, beta1, beta2, muon_beta, weight_lr_scale, label_smoothing, \
-        mup, wandb_logger, seq_len, local_window, num_extrapol, use_cu_seqlen, train_data_config, original_mup
+        mup, wandb_logger, seq_len, local_window, num_extrapol, use_cu_seqlen, train_data_config, original_mup, \
+        save_step_interval, eval_step_interval
     
     # Update global base_hps if provided
     if base_hps is not None:
@@ -175,17 +182,31 @@ def setup(
     label_smoothing = 0.1 if "_ls_" in train_config else 0.0
     model_name = model_name+"_d"+str(depth)
     
-    if seq_len == 4096: # hardcoded for now
-        if use_cu_seqlen:
-            micro_batch_size = 1
-            seq_len = 8192
-        else:
-            micro_batch_size = 2
-    else:
-        # long context
-        micro_batch_size = 1
-        num_extrapol = 2
-        
+    # if seq_len == 4096: # hardcoded for now
+    #     if use_cu_seqlen:
+    #         micro_batch_size = 1
+    #         seq_len = 8192
+    #     else:
+    #         micro_batch_size = 2
+    # else:
+    #     # long context
+    #     micro_batch_size = 1
+    #     num_extrapol = 2
+    
+    # Overrides de CLI (se fornecidos)
+    if cli_total_evals is not None:
+        total_evals = cli_total_evals
+    if cli_save_step_interval is not None:
+        save_step_interval = cli_save_step_interval
+    if cli_eval_step_interval is not None:
+        eval_step_interval = cli_eval_step_interval
+    if cli_log_step_interval is not None:
+        log_step_interval = cli_log_step_interval
+    if cli_micro_batch_size is not None:
+        micro_batch_size = cli_micro_batch_size
+    if cli_num_extrapol is not None:
+        num_extrapol = cli_num_extrapol
+
     eos_token_id = 2 # llama2 token id
         
     ar = Config.from_name(model_name).ar # model aspect ratio
@@ -205,6 +226,7 @@ def setup(
     
     # Calculate target parameters
     n_target = mult * (depth**3)
+    print(f"n_target = {n_target}")
     if max_tokens is not None:
         train_tokens = max_tokens
     else:
@@ -236,7 +258,6 @@ def setup(
     #weight_decay = weight_decay * base_hps.eta0 / learning_rate
     
     global_batch_size =  b // (seq_len * nodes)
-
         
     name = train_config +"_" + model_name+ "_ctx" + str(seq_len)
     if local_window is not None:
@@ -293,6 +314,8 @@ def setup(
     fabric.print(f"world_size={fabric.world_size} nodes={nodes} devices={devices}")
     fabric.print(f"torch.cuda.is_available() = {torch.cuda.is_available()}")
     fabric.print(f"torch.cuda.device_count() = {torch.cuda.device_count()}")
+    # print grad acc, batch size, micro batch size
+    fabric.print(f"grad_accumulation_steps={gradient_accumulation_steps}\nbatch_size={batch_size}\nmicro_batch_size={micro_batch_size}")
     
 
     overides = {"mup": mup, "mup_d0": base_hps.d0, 
@@ -623,13 +646,27 @@ def train(fabric, state, train_dataloader, val_dataloader, monitor, resume):
         # input_id: B L 
         total_lengths += input_ids.size(1) * input_ids.size(0) // micro_batch_size
         t1 = time.perf_counter()
-        fabric.print(
-                f"iter {state['iter_num']} step {state['step_count']}: loss {loss.item():.4f}, iter time:"
-                f" {(t1 - iter_t0) * 1000:.2f}ms{' (optimizer.step)' if not is_accumulating else ''}"
-                f" input_length: {input_ids.size(1)} total_length: {total_lengths} "
-                f" remaining time: {(t1 - total_t0) / (state['iter_num'] - initial_iter) * (max_iters - state['iter_num']) / 3600:.2f} hours. " 
-                # print days as well
-                f" or {(t1 - total_t0) / (state['iter_num'] - initial_iter) * (max_iters - state['iter_num']) / 3600 / 24:.2f} days. "
+    
+        if not is_accumulating and (state["step_count"] % log_step_interval == 0):
+            elapsed_total = time.perf_counter() - total_t0
+            micro_eta_hours = (
+                (elapsed_total / max(1, (state["iter_num"] - initial_iter))) *
+                max(0, (max_iters - state["iter_num"])) / 3600.0
+            )
+            micro_eta_days = micro_eta_hours / 24.0
+
+            steps_done = max(1, state["step_count"])
+            avg_step_time_s = elapsed_total / steps_done
+            steps_left = max(0, max_steps - state["step_count"])
+            step_eta_hours = (avg_step_time_s * steps_left) / 3600.0
+            step_eta_days = step_eta_hours / 24.0
+
+            fabric.print(
+                f"iter {state['iter_num']} step {state['step_count']}: "
+                f"loss {loss.item():.4f}, iter time: {(t1 - iter_t0) * 1000:.2f}ms (optimizer.step) "
+                f"input_length: {input_ids.size(1)} total_length: {total_lengths} "
+                f"remaining (micro): {micro_eta_hours:.2f} hours. or {micro_eta_days:.2f} days. "
+                f"| remaining (step): {step_eta_hours:.2f} hours. or {step_eta_days:.2f} days."
             )
  
         monitor.on_train_batch_end(
